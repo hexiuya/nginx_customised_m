@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>Permission</title>
+		<link rel="stylesheet" type="text/css" href="./easyui.css">
+		<link rel="stylesheet" type="text/css" href="./icon.css">
+		<link rel="stylesheet" type="text/css" href="./myDefinition.css">
+		<script type="text/javascript" src="./jquery.min.js"></script>
+		<script type="text/javascript" src="./jquery.easyui.min.js"></script>
+		<script type="text/javascript" src="./js/jquery.edatagrid.js"></script>
+		<script type="text/javascript" src="./js/common.js"></script>
+		<script type="text/javascript">
+
+			var messageid = "xxxx";
+			var privilege_option = [
+				{"value":'0',"name":'N'},
+				{"value":'1',"name":'Y',"selected":true}
+			];
+			var userId_option = [
+				//{managerid:'3',loginname:'zhangsan'},
+				//{managerid:'4',loginname:'lisi'}
+			];
+			var map = new Map();
+
+			function load(){
+				var username = $("#username").textbox('getValue');
+				$('#dg').datagrid('load',{
+					messageid : messageid,
+					requestid : generateUUID(),
+					managerid : getManagerId(),
+					username : username
+				});
+			}	
+
+			$(function(){
+				$.ajax({
+					url : urlPrefix() + "mGetAllUsers",
+					data : {
+						managerid : getManagerId(),
+					},
+					type : "post",
+					dataType : "json",
+					success : function(data){
+						if(data == null){
+							return ;
+						}
+						if(data.status != "SUCCESS"){
+							return ;
+						}
+						var managers = data.managers;
+						
+						for (var item in managers){
+							// 设置下拉列表
+							var tmp = {
+								managerid:managers[item].managerid+"",
+								loginname:managers[item].loginname
+							}
+							userId_option[item] = tmp;
+							// 设置map
+							map.set(tmp.managerid ,tmp.loginname);
+						}
+						
+						
+						
+					}
+				});
+
+				$('#dg').edatagrid({
+					//url: urlPrefix() + 'mGetAllUserPermission',
+					saveUrl: urlPrefix() + 'mAddPermission',
+					updateUrl: urlPrefix() + 'mUpdatePermission',
+					destroyUrl: urlPrefix() + 'mDeletePermission'
+				});
+				
+				$('#dg').datagrid({
+					url:urlPrefix() + 'mGetAllUserPermission',
+					method:'post',
+					pageNumber:1,
+					pageSize:10,
+					queryParams:{
+						messageid : messageid,
+						requestid : generateUUID(),
+						managerid : getManagerId()
+					},
+					loadFilter:function(data){
+						var lists = data.permissions;
+						if (lists){
+							//加入messageid,requestid，managerid，更新记录时用
+							/*for (var item in lists){
+								lists[item].requestid = generateUUID();
+								lists[item].messageid = "0xxxxx1";
+								lists[item].managerid = getManagerId();
+							}*/
+							return lists;
+						} else {
+							return [];
+						}
+					},
+					rownumbers:true,
+					singleSelect:true,
+					pageSize:20,           
+					pagination:true,
+					multiSort:true,
+					fitColumns:true,
+					pagination:true,
+					pagePosition:'bottom',
+					fit:true,
+					idField:'id',
+					columns:[[
+					    /*
+						{field:'messageid',title:'messageid',width:20,hidden:true},
+						{field:'managerid',title:'managerid',width:20,hidden:true},
+						{field:'requestid',title:'requestid',width:20,hidden:true},
+						*/
+						{field:'id',title:'id',width:20,hidden:true},
+						/*
+						{field:'userId',title:'用户号',width:50,hidden:true},
+						*/
+						{field:'userId',title:'用户名',width:50,align:'center',
+							formatter: function(value,row,index){
+								console.log("row:"+row);
+								// 从map中获取值，用于行编辑时，选择下拉框
+								var loginname = row.loginname;
+								var result = map.get(loginname);
+
+								if(result == null || result == ''){
+									return loginname
+								}
+								return result;
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'managerid',
+									textField:'loginname',
+									data:userId_option,
+									required:true
+								}
+							}
+						},
+						{field:'scanAllCustomers',title:'查看所有客户信息',width:70,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'scanCustomerPosition',title:'查看客户仓位',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'createCustomer',title:'客户开户',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'updateCustomer',title:'更新客户',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'limitCustomerTrade',title:'限制客户交易',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'limitCustomerDepositWithdraw',title:'限制客户出入金',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'updateCustomerOrders',title:'修改客户订单',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'createOrder',title:'创建客户订单',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'deleteOrder',title:'删除客户订单',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						},
+						{field:'scanOpratorLog',title:'查看操作日志',width:50,align:'center',
+							formatter: function(value,row,index){
+								if (value == 1){
+									return '<div style="background-color:#66FF66">Y</div>';
+								} else if (value == 0){
+									return '<div style="background-color:#FFFF77">N</div>';
+								} else {
+									return value;
+								}
+							},
+							editor:{
+								type:'combobox',
+								options:{
+									valueField:'value',
+									textField:'name',
+									data:privilege_option,
+									required:true
+								}
+							}
+						}
+					]]
+				});
+ 			
+			});
+
+			
+		</script>
+	</head>
+	<body class="easyui-layout">
+		<div region="north" split="false" border="true">
+			<form id="ff" method="post" >
+				<div class="widget">
+					<label for="username">用户名:</label>
+					<input class="easyui-textbox"  type="text" name="username" id="username" style="width:150px"> 
+				</div>
+				
+				<div class="widget">
+					<a id="btn" href="javascript:void(0);" class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="load()">搜索</a> 
+				</div>
+			</form>
+		</div>
+	    <div region="center" split="false" border="false" style="height:100%;">
+			<table id="dg" style="width:100%;"
+					toolbar="#toolbar" pagination="true" idField="id"
+					rownumbers="true" fitColumns="true" singleSelect="true">
+				<!--
+				<thead>
+					<tr>
+						<th field="id" width="20" editor="{type:'validatebox',options:{required:true}}">id</th>
+						<th field="userId" width="50" editor="{type:'validatebox',options:{required:true}}">用户号</th>
+						<th field="scanAllCustomers" width="70" editor="text">查看所有客户信息</th>
+						<th field="scanCustomerPosition" width="50" editor="{type:'validatebox',options:{validType:'number'}}">查看客户仓位</th>
+						<th field="createCustomer" width="50" editor="text">客户开户</th>
+						<th field="updateCustomer" width="50" editor="text">更新客户</th>
+						<th field="limitCustomerTrade" width="50" editor="text">限制客户交易</th>
+						<th field="limitCustomerDepositWithdraw" width="70" editor="text">限制客户出入金</th>
+						<th field="updateCustomerOrders" width="50" editor="text">修改客户订单</th>
+						<th field="createOrder" width="50" editor="text">创建客户订单</th>
+						<th field="deleteOrder" width="50" editor="text">删除客户订单</th>
+						<th field="scanOpratorLog" width="50" editor="text">查看操作日志</th>
+					</tr>
+				</thead>
+			-->
+			</table>
+		</div>
+
+		<div id="toolbar" style="overflow:hidden">
+			
+
+			<div style="clear:both">
+				<a href="#" class="easyui-linkbutton" iconCls="icon-add" plain="true" onclick="javascript:$('#dg').edatagrid('addRow')">New</a>
+				<!--
+				<a href="#" class="easyui-linkbutton" iconCls="icon-remove" plain="true" onclick="javascript:$('#dg').edatagrid('destroyRow')">Destroy</a>
+				-->
+				<a href="#" class="easyui-linkbutton" iconCls="icon-save" plain="true" onclick="javascript:$('#dg').edatagrid('saveRow')">Save</a>
+				<a href="#" class="easyui-linkbutton" iconCls="icon-undo" plain="true" onclick="javascript:$('#dg').edatagrid('cancelRow')">Cancel</a>
+			</div>
+		</div>
+
+	</body>
+</html>
